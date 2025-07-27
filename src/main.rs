@@ -1,8 +1,8 @@
 mod client;
 mod commands;
-
 use crate::commands::download::download_and_save;
-use crate::commands::get_quote::get_quote;
+
+
 
 #[tokio::main]
 async fn main() -> databento::Result<()> {

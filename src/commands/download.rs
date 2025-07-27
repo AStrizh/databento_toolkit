@@ -1,9 +1,18 @@
-use std::{fs::File, io::BufWriter};
-use tokio::fs::File as TokioFile;
+// ───── Std imports ─────
+use std::{
+    fs::File,
+    io::{BufWriter, Write},
+    pin::Pin,
+};
 
-use tokio::io::{BufReader, AsyncRead};
-use std::pin::Pin;
+// ───── Tokio imports ─────
+use tokio::{
+    fs::File as TokioFile,
+    io::{AsyncRead, BufReader as AsyncBufReader},
+};
 
+// ───── Third-party crates ─────
+use async_compression::tokio::bufread::ZstdDecoder;
 use databento::{
     dbn::{OhlcvMsg, Schema},
     historical::timeseries::{AsyncDbnDecoder, GetRangeToFileParams},
@@ -11,14 +20,10 @@ use databento::{
 use serde::Serialize;
 use time::macros::datetime;
 
+// ───── Internal modules ─────
 use crate::client::get_client;
 
-use tokio::io::{BufReader as AsyncBufReader};
-use async_compression::tokio::bufread::ZstdDecoder;
-use std::io::Write;
 
-const DBN_PATH: &str = "CLN3_2023-06.dbn.zst";
-const JSON_PATH: &str = "CLN3_2023-06_ohlcv1m.json";
 const DBN_EXT: &str = ".dbn.zst";
 const JSON_EXT: &str = "_ohlcv1m.json";
 #[derive(Serialize)]
@@ -39,10 +44,6 @@ pub async fn download_and_save(symbol: &str, base_path: &str) -> databento::Resu
     println!("Starting download...");
     download_data(symbol, base_path).await?;
     println!("Download complete. Reading file...");
-
-
-    // let records = read_dbn_to_json_records(base_path, symbol).await?;
-    // println!("Parsed {} records", records.len());
 
     stream_decode_and_write(base_path, symbol).await.expect("Could not complete decode and save.");
     println!("Saved JSON to {base_path}{JSON_EXT}");
