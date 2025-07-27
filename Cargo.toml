@@ -1,0 +1,9 @@
+[package]
+name = "databento_toolkit"
+version = "0.1.0"
+edition = "2024"
+[dependencies]
+databento = "0.30.0"
+time = { version = "0.3.41", features = ["macros"] }
+tokio = { version = "1.47.0", features = ["full"] }
+dotenvy = "0.15.7"
