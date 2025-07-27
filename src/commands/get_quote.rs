@@ -2,7 +2,7 @@ use crate::client::get_client;
 use databento::{dbn::Schema, historical::metadata::GetCostParams};
 use time::macros::datetime;
 
-pub async fn run_get_cost() -> databento::Result<()> {
+pub async fn get_quote() -> databento::Result<()> {
     let mut client = get_client();
 
     let cost = client
