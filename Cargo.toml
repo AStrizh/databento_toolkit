@@ -7,3 +7,4 @@ databento = "0.30.0"
 time = { version = "0.3.41", features = ["macros"] }
 tokio = { version = "1.47.0", features = ["full"] }
 dotenvy = "0.15.7"
+once_cell = "1.21.3"
