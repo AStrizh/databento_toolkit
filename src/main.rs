@@ -1,5 +1,7 @@
 mod client;
 mod commands;
+mod downloader;
+
 use crate::commands::download::download_and_save;
 
 

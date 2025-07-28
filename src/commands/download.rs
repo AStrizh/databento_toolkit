@@ -112,6 +112,44 @@ async fn stream_decode_and_write(base_path: &str, symbol: &str) -> databento::Re
 }
 
 
+//-----------------------------------------------------------------------------------------------//
+//TODO: Check if the following ChatGPT code is any good
 
+use crate::downloader::{contracts::generate_contract_periods, fetch::download_data, decode::stream_decode_and_write};
+use time::macros::date;
 
+pub async fn download_history() -> databento::Result<()> {
+    let periods = generate_contract_periods(date!(2015 - 01 - 01), date!(2025 - 07 - 21));
 
+    for (symbol, start_date, end_date) in periods {
+        let year_folder = format!("data/{}", start_date.year());
+        std::fs::create_dir_all(&year_folder)?;
+
+        let base_path = format!("{}/{}", year_folder, symbol);
+
+        download_data(&symbol, &base_path, start_date, end_date).await?;
+        stream_decode_and_write(&base_path, &symbol).await?;
+    }
+
+    Ok(())
+}
+
+pub async fn download_data(symbol: &str, base_path: &str, start: Date, end: Date) -> databento::Result<()> {
+    let mut client = get_client();
+    let path = format!("{base_path}.dbn.zst");
+
+    client
+        .timeseries()
+        .get_range_to_file(
+            &GetRangeToFileParams::builder()
+                .dataset("GLBX.MDP3")
+                .date_time_range((start.midnight().assume_utc(), end.midnight().assume_utc()))
+                .symbols(symbol.to_string())
+                .schema(Schema::Ohlcv1M)
+                .path(path)
+                .build(),
+        )
+        .await?;
+
+    Ok(())
+}
