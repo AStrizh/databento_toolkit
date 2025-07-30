@@ -18,108 +18,64 @@ use databento::{
     historical::timeseries::{AsyncDbnDecoder, GetRangeToFileParams},
 };
 use serde::Serialize;
+use time::Date;
 use time::macros::datetime;
 
 // ───── Internal modules ─────
 use crate::client::get_client;
 
 
-const DBN_EXT: &str = ".dbn.zst";
-const JSON_EXT: &str = "_ohlcv1m.json";
-#[derive(Serialize)]
-pub struct JsonOhlcv {
-    instrument_name: String,
-    instrument_id: u32,
-    ts_event: u64,
-    open: i64,
-    high: i64,
-    low: i64,
-    close: i64,
-    volume: u64,
-}
 
 
-/// Manages the downloading of records from Databento and unpacking into JSON
-pub async fn download_and_save(symbol: &str, base_path: &str) -> databento::Result<()> {
-    println!("Starting download...");
-    download_data(symbol, base_path).await?;
-    println!("Download complete. Reading file...");
 
-    stream_decode_and_write(base_path, symbol).await.expect("Could not complete decode and save.");
-    println!("Saved JSON to {base_path}{JSON_EXT}");
-
-    Ok(())
-}
-
-
-/// Downloads the data and stores it in memory
-async fn download_data(symbol: &str, base_path: &str ) -> databento::Result<()> {
-    let mut client = get_client();
-    let path = format!("{base_path}{DBN_EXT}");
-
-    client
-        .timeseries()
-        .get_range_to_file(
-            &GetRangeToFileParams::builder()
-                .dataset("GLBX.MDP3")
-                .date_time_range((
-                    datetime!(2023-06-01 00:00 UTC),
-                    datetime!(2023-06-30 23:59 UTC),
-                ))
-                .symbols(symbol.parse::<String>().unwrap())
-                .schema(Schema::Ohlcv1M)
-                .path(path)
-                .build(),
-        )
-        .await?;
-
-    Ok(())
-}
-
-/// Decodes and writes records from the `.dbn.zst ` file directly to `.json`, one per line
-async fn stream_decode_and_write(base_path: &str, symbol: &str) -> databento::Result<()> {
-
-    let input_path = format!("{base_path}{}", DBN_EXT);
-    let output_path = format!("{base_path}{}", JSON_EXT);
-
-    let file = TokioFile::open(input_path).await?;
-    let buf_reader = AsyncBufReader::new(file);
-    let zstd_decoder = ZstdDecoder::new(buf_reader);
-    let pinned_reader = Box::pin(zstd_decoder) as Pin<Box<dyn AsyncRead + Send>>;
-
-    let mut decoder = AsyncDbnDecoder::new(pinned_reader).await?;
-
-    let out_file = File::create(output_path).expect("Failed to create output JSON file");
-    let mut writer = BufWriter::new(out_file);
-
-    while let Some(msg) = decoder.decode_record::<OhlcvMsg>().await? {
-        let record = JsonOhlcv {
-            instrument_name: symbol.to_string(),
-            instrument_id: msg.hd.instrument_id,
-            ts_event: msg.hd.ts_event,
-            open: msg.open,
-            high: msg.high,
-            low: msg.low,
-            close: msg.close,
-            volume: msg.volume,
-        };
-
-        serde_json::to_writer(&mut writer, &record).expect("Failed to write JSON record");
-        writeln!(&mut writer).expect("Failed to write newline");
-    }
-
-    Ok(())
-}
+// /// Manages the downloading of records from Databento and unpacking into JSON
+// pub async fn download_and_save(symbol: &str, base_path: &str) -> databento::Result<()> {
+//     println!("Starting download...");
+//     download_data(symbol, base_path).await?;
+//     println!("Download complete. Reading file...");
+//
+//     stream_decode_and_write(base_path, symbol).await.expect("Could not complete decode and save.");
+//     println!("Saved JSON to {base_path}{JSON_EXT}");
+//
+//     Ok(())
+// }
+//
+//
+// /// Downloads the data and stores it in memory
+// async fn download_data(symbol: &str, base_path: &str ) -> databento::Result<()> {
+//     let mut client = get_client();
+//     let path = format!("{base_path}{DBN_EXT}");
+//
+//     client
+//         .timeseries()
+//         .get_range_to_file(
+//             &GetRangeToFileParams::builder()
+//                 .dataset("GLBX.MDP3")
+//                 .date_time_range((
+//                     datetime!(2023-06-01 00:00 UTC),
+//                     datetime!(2023-06-30 23:59 UTC),
+//                 ))
+//                 .symbols(symbol.parse::<String>().unwrap())
+//                 .schema(Schema::Ohlcv1M)
+//                 .path(path)
+//                 .build(),
+//         )
+//         .await?;
+//
+//     Ok(())
+// }
+//
 
 
-//-----------------------------------------------------------------------------------------------//
+
+//-------------------------------------------------------------------------------------------------//
 //TODO: Check if the following ChatGPT code is any good
 
 use crate::downloader::{contracts::generate_contract_periods, fetch::download_data, decode::stream_decode_and_write};
 use time::macros::date;
 
 pub async fn download_history() -> databento::Result<()> {
-    let periods = generate_contract_periods(date!(2015 - 01 - 01), date!(2025 - 07 - 21));
+    let periods = generate_contract_periods(date!(2015 - 01 - 01), date!(2025 - 07 - 25));
 
     for (symbol, start_date, end_date) in periods {
         let year_folder = format!("data/{}", start_date.year());
@@ -130,26 +86,6 @@ pub async fn download_history() -> databento::Result<()> {
         download_data(&symbol, &base_path, start_date, end_date).await?;
         stream_decode_and_write(&base_path, &symbol).await?;
     }
-
-    Ok(())
-}
-
-pub async fn download_data(symbol: &str, base_path: &str, start: Date, end: Date) -> databento::Result<()> {
-    let mut client = get_client();
-    let path = format!("{base_path}.dbn.zst");
-
-    client
-        .timeseries()
-        .get_range_to_file(
-            &GetRangeToFileParams::builder()
-                .dataset("GLBX.MDP3")
-                .date_time_range((start.midnight().assume_utc(), end.midnight().assume_utc()))
-                .symbols(symbol.to_string())
-                .schema(Schema::Ohlcv1M)
-                .path(path)
-                .build(),
-        )
-        .await?;
 
     Ok(())
 }
