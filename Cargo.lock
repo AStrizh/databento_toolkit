@@ -18,6 +18,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 
 [[package]]
+name = "anyhow"
+version = "1.0.98"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e16d2d3311acee920a9eb8d33b8cbc1787ce4a264e85f964c2404b969bdcd487"
+
+[[package]]
 name = "async-compression"
 version = "0.4.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -166,9 +172,9 @@ dependencies = [
 
 [[package]]
 name = "databento"
-version = "0.30.0"
+version = "0.31.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a2e3a94d7a171e13668b6e5e24a67ee23ed44dc01df43a9955e0998f7bdb336"
+checksum = "6c015e145b5e652a6478fa5029e22766e1aeb4fdba0c1f02805f9ea60954d71b"
 dependencies = [
  "async-compression",
  "dbn",
@@ -190,9 +196,11 @@ dependencies = [
 name = "databento_toolkit"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "async-compression",
  "databento",
  "dotenvy",
+ "num_enum",
  "once_cell",
  "reqwest",
  "serde",
@@ -203,9 +211,9 @@ dependencies = [
 
 [[package]]
 name = "dbn"
-version = "0.38.0"
+version = "0.39.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d75b73cb84174641ccee484bff52e7c37a8df07e7110442faa5fd601535d1a30"
+checksum = "00d29b6cf0aa80651330e9973eb0f1cf4eee79a4769d878480eb0f7aa0eb0bc0"
 dependencies = [
  "async-compression",
  "csv",
@@ -224,9 +232,9 @@ dependencies = [
 
 [[package]]
 name = "dbn-macros"
-version = "0.38.0"
+version = "0.39.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eb85f28f3645ccbb40f9d720ccbbb6bbe899c504a8d12363b5c3ff6867747e39"
+checksum = "b8287d694025961e29a62df41f2ab566bd5e73ecce94cc645adc0a63230f5ce5"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -1068,9 +1076,9 @@ checksum = "69cdb34c158ceb288df11e18b4bd39de994f6657d83847bdffdbd7f346754b0f"
 
 [[package]]
 name = "redox_syscall"
-version = "0.5.16"
+version = "0.5.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7251471db004e509f4e75a62cca9435365b5ec7bcdff530d612ac7c87c44a792"
+checksum = "5407465600fb0548f1442edf71dd20683c6ed326200ace4b1ef0763521bb3b77"
 dependencies = [
  "bitflags",
 ]
@@ -1153,9 +1161,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.23.30"
+version = "0.23.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "069a8df149a16b1a12dcc31497c3396a173844be3cac4bd40c9e7671fef96671"
+checksum = "c0ebcbd2f03de0fc1122ad9bb24b127a5a6cd51d72604a3f3c50ac459762b6cc"
 dependencies = [
  "once_cell",
  "rustls-pki-types",
@@ -1871,7 +1879,7 @@ version = "0.60.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2f500e4d28234f72040990ec9d39e3a6b950f9f22d3dba18416c35882612bcb"
 dependencies = [
- "windows-targets 0.53.2",
+ "windows-targets 0.53.3",
 ]
 
 [[package]]
@@ -1892,10 +1900,11 @@ dependencies = [
 
 [[package]]
 name = "windows-targets"
-version = "0.53.2"
+version = "0.53.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c66f69fcc9ce11da9966ddb31a40968cad001c5bedeb5c2b82ede4253ab48aef"
+checksum = "d5fe6031c4041849d7c496a8ded650796e7b6ecc19df1a431c1a363342e5dc91"
 dependencies = [
+ "windows-link",
  "windows_aarch64_gnullvm 0.53.0",
  "windows_aarch64_msvc 0.53.0",
  "windows_i686_gnu 0.53.0",
