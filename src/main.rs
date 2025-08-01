@@ -2,24 +2,12 @@ use crate::commands::download::download_history;
 use crate::commands::get_quote::get_quote;
 use clap::Parser;
 use anyhow::Result;
-use crate::downloader::decode::stream_decode_and_write;
+use crate::downloader::decode::{decode_all_in_dir};
 
 mod client;
 mod commands;
 mod downloader;
 mod types;
-//use crate::commands::download::download_and_save;
-
-
-//
-// #[tokio::main]
-// async fn main() -> databento::Result<()> {
-//     //download_and_save("CLN3","CLN3_2023-06").await.expect("Couldnt complete");
-//     download_history().await.expect("Couldn't finish retrieving history");
-//     //get_quote().await.expect("Couldn't get quote");
-//     Ok(())
-// }
-
 
 
 #[derive(Parser)]
@@ -47,7 +35,7 @@ async fn main() -> Result<()> {
     match args.task {
         Task::Download => download_history(base_path).await?,
         Task::Quote => get_quote().await?,
-        Task::Decode => stream_decode_and_write(base_path).await?,
+        Task::Decode => decode_all_in_dir(base_path).await?,
     }
 
     Ok(())

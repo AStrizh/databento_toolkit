@@ -2,7 +2,8 @@
 
 This project [WILL] provide(s) tools for downloading, decoding, and processing historical market data using the [Databento API](https://docs.databento.com/) and the Rust programming language. 
 Currently only downloads data for crude oil (CL) futures contracts (should be simple enough to modify for other Futures symbols). 
-The project includes functionality to efficiently download datasets, decode them, and prepare them for further analysis.
+The project includes functionality to efficiently download datasets, decode them, and prepare them for further analysis. 
+It specifically downloads the last 40 days of a contract (when it is front of the month). Time periods can be adjusted in the code.
 
 - This is an independent project by Aleksandr Strizhevskiy, and is not supported by Databento
 
@@ -24,8 +25,8 @@ The project includes functionality to efficiently download datasets, decode them
     - Configure the range of years for generation.
    
 
-3. **Decode Data** (not tested atm)
-    - Decode Databento's `.dbn.zst` compressed binary format into a more human-readable or analyzable format, such as JSON or CSV.
+3. **Decode Data**
+    - Decode Databento's `.dbn.zst` compressed binary format into JSON.
 
 
 4. **Request a Quote (Get API Cost)**
@@ -83,13 +84,12 @@ You can customize the base folder where downloads are saved by editing the `base
 
 ---
 
-### 2. **Decode Files** (Not yet functional)
+### 2. **Decode Files**
 
-After downloading, you’ll need to decode the `.dbn.zst` files into a readable format such as JSON. 
-Use the `decode` task to convert the downloaded data. (Does not work as of last commit)
+After downloading, you’ll need to decode the `.dbn.zst` files into a readable format. 
+Use the `decode` task to convert the downloaded data.
 
-
-The decode task reads files in the `Hist_Fut_Data/` directory, decodes them, and saves them into a format that is easier to analyze.
+The decode task reads files in the `Hist_Fut_Data/` directory, decodes them, and saves them as JSON.
 
 ---
 
@@ -109,8 +109,10 @@ The printed output will show the cost estimate (in USD) for this request:
 Cost for request: $0.0599
 ```
 
-
-
+### Note:
+It cost $3.21 to download 24 months (24 contracts 40 days each) of CL futures data in 1-minute bars (this is the code as written now).  
+You may optimize it further to download even fewer bars, further reducing costs.  
+Costs seem to vary from contract to contract and month to month.
 ---
 
 
@@ -142,7 +144,7 @@ Defines CME rules for generating contract symbols (e.g., `CLN3`) and their expir
 Handles the actual download of data using the Databento API client for the generated contract periods.
 
 #### 6. `decode.rs`
-(Will)Process(es) `.dbn.zst` files from the download directory and decodes them into a human-readable format (e.g., JSON).
+Processes `.dbn.zst` files from the download directory and decodes them into JSON.
 
 #### 7. `get_quote.rs`
 Returns the estimated cost of a history download request from Databento.
@@ -157,7 +159,7 @@ Returns the estimated cost of a history download request from Databento.
 let periods = generate_cl_contract_periods(start_year, end_year);
 ```
 
-Replace `start_year` and `end_year` with your desired range.
+Replace `start_year` and `end_year` with your desired range. (I will add ability to specify dates and hours soon)
 
 2. **Concurrency Limits**
    Semaphore limits concurrency to avoid API throttling. Adjust this line in `download.rs`:
@@ -179,7 +181,7 @@ let semaphore = Arc::new(Semaphore::new(10)); // Change 10 to desired limit
 1. **Download the Data:**
    Run the `download` task to fetch `.dbn.zst` datasets:
 ```shell script
-cargo run -- --task download
+cargo run --package databento_toolkit --bin databento_toolkit -- download
 ```
 
 
@@ -193,19 +195,22 @@ Hist_Fut_Data/2023/CLN3.dbn.zst
 3. **Decode Files:**
    Use the `decode` task:
 ```shell script
-cargo run -- --task decode
+cargo run --package databento_toolkit --bin databento_toolkit -- decode
 ```
-
 Decoded files are saved in the same directory (`Hist_Fut_Data`).
 
 ---
 
 ## Future Enhancements
 
-- **Decode:**
-  Decode files you downloaded (next thing, will be finished very soon).
 - **Symbol and Date Flexibility:**
   Extend support for downloading and processing other futures symbols (e.g., GC for gold or ES for S&P 500).
+- **Pretty Print Option:**
+    Currently, decoded times are in Unix time and prices are in integers with no decimals.
+- **Other Data Sets:**
+    Databento gives to option to download data from different sources in many different formats (including tick data).
+    
+    Low priority.
 - **A Graphical User Interface:**
   Very low priority
 ---
