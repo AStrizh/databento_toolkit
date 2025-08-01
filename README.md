@@ -109,10 +109,11 @@ The printed output will show the cost estimate (in USD) for this request:
 Cost for request: $0.0599
 ```
 
-### Note:
+### **Note**:
 It cost $3.21 to download 24 months (24 contracts 40 days each) of CL futures data in 1-minute bars (this is the code as written now).  
 You may optimize it further to download even fewer bars, further reducing costs.  
 Costs seem to vary from contract to contract and month to month.
+
 ---
 
 
