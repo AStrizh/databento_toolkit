@@ -1,8 +1,8 @@
 # Databento Toolkit (Unofficial)
 
-This project [WILL] provide(s) tools for downloading, decoding, and processing historical market data using the [Databento API](https://docs.databento.com/) and the Rust programming language. 
-Currently only downloads data for crude oil (CL) futures contracts (should be simple enough to modify for other Futures symbols). 
-The project includes functionality to efficiently download datasets, decode them, and prepare them for further analysis. 
+This project [WILL] provide(s) tools for downloading, decoding, and processing historical market data using the [Databento API](https://docs.databento.com/) and the Rust Programming Language. 
+
+Currently only configured to download 1-minute bar data (OHLCV) for CL (WTI Light Sweet Crude Oil) futures contracts (should be simple enough to modify for other Futures symbols). 
 It specifically downloads the last 40 days of a contract (when it is front of the month). Time periods can be adjusted in the code.
 
 - This is an independent project by Aleksandr Strizhevskiy, and is not supported by Databento
