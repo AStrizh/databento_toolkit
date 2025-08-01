@@ -1,5 +1,3 @@
-
-use time::Date;
 use databento::dbn::Schema;
 use databento::historical::timeseries::GetRangeToFileParams;
 use crate::types::DownloadTask;

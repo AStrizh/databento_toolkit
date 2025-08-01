@@ -2,7 +2,6 @@
 use async_compression::tokio::bufread::ZstdDecoder;
 use databento::dbn::decode::AsyncDbnDecoder;
 use databento::dbn::OhlcvMsg;
-//use crate::commands::download::JsonOhlcv;
 
 // ───── Std imports ─────
 use std::{
@@ -24,10 +23,12 @@ const JSON_EXT: &str = "_ohlcv1m.json";
 
 
 /// Decodes and writes records from the `.dbn.zst ` file directly to `.json`, one per line
-pub(crate) async fn stream_decode_and_write(base_path: &str, symbol: &str) -> databento::Result<()> {
+pub(crate) async fn stream_decode_and_write(base_path: &str) -> databento::Result<()> {
 
+    //TODO:Paths are not correct, fix them
     let input_path = format!("{base_path}{}", DBN_EXT);
     let output_path = format!("{base_path}{}", JSON_EXT);
+    let symbol = "CL"; //TODO: Replace with code that detects symbol name from .dbn.zst file
 
     let file = TokioFile::open(input_path).await?;
     let buf_reader = AsyncBufReader::new(file);

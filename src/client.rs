@@ -9,7 +9,7 @@ pub struct DBClient {
 impl DBClient {
     /// Creates a new client using the API key from the environment
     pub fn new() -> Self {
-        let api_key = std::env::var("DATABENTO_API_KEY")
+        let api_key = dotenvy::var("DATABENTO_API_KEY")
             .expect("DATABENTO_API_KEY must be set");
 
         let client = HistoricalClient::builder()

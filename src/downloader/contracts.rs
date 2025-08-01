@@ -82,28 +82,74 @@ mod tests {
     use time::macros::date;
 
     #[test]
-    fn test_cln3_expiration_date() {
-        let delivery_month = Month::July;
+    fn test_cl_expiration_date() {
+        let delivery_month = Month::October;
         let year = 2025;
 
-        let expected_expiration = date!(2025 - 06 - 22);
+        let expected_expiration = date!(2025 - 09 - 22);
         let actual_expiration = calculate_cl_expiration(year, delivery_month);
 
         assert_eq!(expected_expiration, actual_expiration);
     }
 
     #[test]
-    fn test_cln3_contract_symbol() {
-        let delivery_month = Month::July;
-        let year = 2023;
+    fn test_cl_contract_symbol() {
+        let delivery_month = Month::September;
+        let year = 2026;
 
         let symbol = format_cl_symbol(year, delivery_month);
-        assert_eq!(symbol, "CLN3");
+        assert_eq!(symbol, "CLU6");
     }
 
     #[test]
     fn test_generate_range_has_correct_count() {
         let periods = generate_cl_contract_periods(2022, 2023);
         assert_eq!(periods.len(), 24); // 2 years × 12 months
+    }
+
+    #[test]
+    fn test_previous_month_handles_year_boundary() {
+        let (year, month) = previous_month(Month::January, 2024);
+        assert_eq!((year, month), (2023, Month::December));
+    }
+
+    #[test]
+    fn test_futures_month_code_mapping() {
+        assert_eq!(futures_month_code(Month::February), "G");
+        assert_eq!(futures_month_code(Month::December), "Z");
+    }
+
+    #[test]
+    fn test_generate_cl_contract_periods_first_last_symbol() {
+        let periods = generate_cl_contract_periods(2022, 2023);
+        let first_symbol = &periods.first().unwrap().0;
+        let last_symbol = &periods.last().unwrap().0;
+        assert_eq!(first_symbol, "CLF2");
+        assert_eq!(last_symbol, "CLZ3");
+    }
+
+
+    #[test]
+    fn test_previous_month_wraps_year() {
+        let (y, m) = previous_month(Month::January, 2024);
+        assert_eq!(y, 2023);
+        assert_eq!(m, Month::December);
+    }
+
+    #[test]
+    fn test_calculate_cl_expiration_weekend() {
+        // June 25th, 2023 is a Sunday so expiration should fall on the prior
+        // Wednesday (21st).
+        let expiry = calculate_cl_expiration(2023, Month::July);
+        assert_eq!(expiry, date!(2023 - 06 - 21));
+    }
+
+    #[test]
+    fn test_first_period_contents() {
+        let periods = generate_cl_contract_periods(2022, 2022);
+        let (symbol, start, end) = &periods[0];
+        assert_eq!(symbol, "CLF2");
+        assert_eq!(*start, date!(2021 - 11 - 12));
+        assert_eq!(*end, date!(2021 - 12 - 25));
     }
 }
