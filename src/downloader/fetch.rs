@@ -3,8 +3,7 @@ use databento::historical::timeseries::GetRangeToFileParams;
 use crate::types::DownloadTask;
 
 pub async fn download_data(mut task: DownloadTask) -> databento::Result<()> {
-    let path = format!("{}.dbn.zst", task.base_path);
-
+    let path = format!("{}/{}.dbn.zst", task.base_path, task.symbol);
     task.client
         .get_mut()
         .timeseries()
@@ -19,5 +18,6 @@ pub async fn download_data(mut task: DownloadTask) -> databento::Result<()> {
         )
         .await?;
 
+    println!("Finished downloading {} for period {} to {}", task.symbol, task.start, task.end);
     Ok(())
 }
