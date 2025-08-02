@@ -1,23 +1,22 @@
 use async_compression::tokio::bufread::ZstdDecoder;
-use databento::dbn::decode::AsyncDbnDecoder;
-use databento::dbn::OhlcvMsg;
+use databento::dbn::{decode::AsyncDbnDecoder, OhlcvMsg};
 use std::{
     fs::{self, File},
     io::{BufWriter, Write},
-    path::Path,
+    path::{Path, PathBuf},
     pin::Pin,
 };
-use std::path::PathBuf;
 use tokio::{
     fs::File as TokioFile,
     io::{AsyncRead, BufReader as AsyncBufReader},
 };
+
 use crate::types::JsonOhlcv;
 
 const DBN_EXT: &str = ".dbn.zst";
 const JSON_EXT: &str = "_ohlcv1m.json";
 
-/// Decodes all `.dbn.zst` files in the given directory tree.
+/// Recursively decode all `.dbn.zst` files in a directory tree to JSON files.
 pub async fn decode_all_in_dir(root_dir: &str) -> databento::Result<()> {
     let mut stack = vec![PathBuf::from(root_dir)];
 
@@ -28,10 +27,19 @@ pub async fn decode_all_in_dir(root_dir: &str) -> databento::Result<()> {
 
             if path.is_dir() {
                 stack.push(path);
-            } else if let Some(ext) = path.extension() {
-                if ext == "zst" && path.to_str().unwrap().ends_with(".dbn.zst") {
-                    let base_path = path.to_str().unwrap().strip_suffix(".dbn.zst").unwrap();
-                    stream_decode_and_write(base_path).await?;
+            } else if path.extension().and_then(|e| e.to_str()) == Some("zst")
+                && path.file_name().and_then(|f| f.to_str()).map_or(false, |f| f.ends_with(DBN_EXT))
+            {
+                let base_path = path.with_extension(""); // removes only `.zst`
+                let base_path = base_path
+                    .to_str()
+                    .unwrap()
+                    .strip_suffix(".dbn")
+                    .unwrap()
+                    .to_string();
+
+                if let Err(e) = stream_decode_and_write(&base_path).await {
+                    eprintln!("Error decoding file {}: {:?}", path.display(), e);
                 }
             }
         }
@@ -40,12 +48,12 @@ pub async fn decode_all_in_dir(root_dir: &str) -> databento::Result<()> {
     Ok(())
 }
 
-/// Decodes and writes records from a `.dbn.zst` file to JSON.
+/// Decode a single `.dbn.zst` file to `<base>_ohlcv1m.json`.
 pub async fn stream_decode_and_write(base_path: &str) -> databento::Result<()> {
     let input_path = format!("{base_path}{DBN_EXT}");
     let output_path = format!("{base_path}{JSON_EXT}");
 
-    // Try to infer the symbol from the filename
+    // Get filename without path and extension as instrument name
     let symbol = Path::new(base_path)
         .file_name()
         .unwrap()
@@ -60,8 +68,10 @@ pub async fn stream_decode_and_write(base_path: &str) -> databento::Result<()> {
 
     let mut decoder = AsyncDbnDecoder::new(pinned_reader).await?;
 
-    let out_file = File::create(&output_path).expect("Failed to create output JSON file");
+    let out_file = File::create(&output_path)?;
     let mut writer = BufWriter::new(out_file);
+
+    println!("Decoding {input_path} → {output_path}");
 
     while let Some(msg) = decoder.decode_record::<OhlcvMsg>().await? {
         let record = JsonOhlcv {
@@ -75,8 +85,8 @@ pub async fn stream_decode_and_write(base_path: &str) -> databento::Result<()> {
             volume: msg.volume,
         };
 
-        serde_json::to_writer(&mut writer, &record).expect("Failed to write JSON record");
-        writeln!(&mut writer).expect("Failed to write newline");
+        serde_json::to_writer(&mut writer, &record).expect("Could not decode");
+        writeln!(&mut writer)?;
     }
 
     Ok(())

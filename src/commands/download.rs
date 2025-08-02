@@ -1,32 +1,37 @@
 use std::fs;
 use std::path::Path;
 use std::sync::Arc;
-use crate::downloader::{contracts::generate_cl_contract_periods, fetch::download_data};
+use crate::downloader::{contracts::generate_contract_periods, fetch::download_data};
 use crate::client::DBClient;
 use crate::types::DownloadTask;
 use tokio::sync::Semaphore;
-
 use anyhow::Result;
 
+use time::Date;
 
-pub async fn download_history(base_path: &str) -> Result<()> {
-    let periods = generate_cl_contract_periods(2023, 2024);
+pub async fn download_history(
+    start_date: Date,
+    end_date: Date,
+    symbols: &[&str],
+    base_path: &str
+) -> Result<()> {
+    let periods = generate_contract_periods(start_date, end_date, symbols);
 
-    for (_, start, _) in &periods {
-        let year_path = format!("{base_path}/{}/", start.year());
-
-        if !Path::new(&year_path).exists() {
-            fs::create_dir_all(&year_path)?;
+    // Create symbol directories inside each year
+    for (symbol, start, _) in &periods {
+        let symbol_dir = format!("{}/{}/{}", base_path, start.year(), symbol);
+        if !Path::new(&symbol_dir).exists() {
+            fs::create_dir_all(&symbol_dir)?;
         }
     }
 
-    // Semaphore with a limit of 5 concurrent tasks
     let semaphore = Arc::new(Semaphore::new(10));
 
     let handles = periods
         .into_iter()
         .map(|(symbol, start, end)| {
-            let symbol_path = format!("{base_path}/{}/", start.year());
+            let symbol_path = format!("{}/{}/{}", base_path, start.year(), symbol);
+
             let task = DownloadTask {
                 client: DBClient::new(),
                 symbol,
@@ -36,12 +41,8 @@ pub async fn download_history(base_path: &str) -> Result<()> {
             };
 
             let semaphore = Arc::clone(&semaphore);
-
             tokio::spawn(async move {
-                // Acquire a permit to ensure only `N` tasks run concurrently
                 let _permit = semaphore.acquire().await;
-
-                // Perform the download
                 download_data(task).await
             })
         })

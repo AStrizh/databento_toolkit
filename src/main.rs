@@ -2,6 +2,7 @@ use crate::commands::download::download_history;
 use crate::commands::get_quote::get_quote;
 use clap::Parser;
 use anyhow::Result;
+use time::{Date, Month};
 use crate::downloader::decode::{decode_all_in_dir};
 
 mod client;
@@ -26,6 +27,8 @@ enum Task {
     Decode,
 }
 
+
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
@@ -33,7 +36,11 @@ async fn main() -> Result<()> {
     let base_path = "Hist_Fut_Data";
 
     match args.task {
-        Task::Download => download_history(base_path).await?,
+        Task::Download => download_history(
+            Date::from_calendar_date(2022, Month::February, 1).unwrap(),
+            Date::from_calendar_date(2024, Month::May, 31).unwrap(),
+            &["CL","ES"],
+            base_path).await?,
         Task::Quote => get_quote().await?,
         Task::Decode => decode_all_in_dir(base_path).await?,
     }

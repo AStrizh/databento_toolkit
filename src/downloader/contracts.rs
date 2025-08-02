@@ -1,4 +1,4 @@
-use time::{Date, Month, Weekday};
+use time::{Date, Duration, Month, Weekday};
 use std::convert::TryFrom;
 
 /// Maps Month enum to Futures month code letter.
@@ -39,7 +39,7 @@ fn format_cl_symbol(year: i32, delivery_month: Month) -> String {
 
 /// Calculates the expiration date for CL contracts based on CME rules:
 /// "Trading terminates 3 business days before the 25th of the month prior to delivery."
-fn calculate_cl_expiration(year: i32, delivery_month: Month) -> Date {
+fn energy_expiry(year: i32, delivery_month: Month) -> Date {
     let (exp_year, exp_month) = previous_month(delivery_month, year);
 
     let mut date = Date::from_calendar_date(exp_year, exp_month, 25).unwrap();
@@ -55,25 +55,95 @@ fn calculate_cl_expiration(year: i32, delivery_month: Month) -> Date {
     date
 }
 
-/// Generates contract periods for CL from a start year to an end year (inclusive).
-/// Each entry is a tuple: (symbol, download_start_date, download_end_date)
-/// Download window is from 40 days before expiration to 3 days after.
-pub fn generate_cl_contract_periods(start_year: i32, end_year: i32) -> Vec<(String, Date, Date)> {
-    let mut periods = Vec::new();
+fn indices_expiry(year: i32, month: Month) -> Date {
+    // Start at 1st of the month and find the 3rd Friday
+    let mut count = 0;
+    let mut date = Date::from_calendar_date(year, month, 1).unwrap();
 
-    for year in start_year..=end_year {
-        for &month in ALL_MONTHS.iter() {
-            let expiry = calculate_cl_expiration(year, month);
-            let start_date = expiry - time::Duration::days(40);
-            let end_date = expiry + time::Duration::days(3);
-            let symbol = format_cl_symbol(year, month);
-
-            periods.push((symbol, start_date, end_date));
+    while count < 3 {
+        if date.weekday() == Weekday::Friday {
+            count += 1;
+        }
+        if count < 3 {
+            date = date.next_day().unwrap();
         }
     }
 
-    periods
+    date
 }
+
+
+/// Generates contract periods for CL from a start year to an end year (inclusive).
+/// Each entry is a tuple: (symbol, download_start_date, download_end_date)
+/// Download window is from 40 days before expiration to 3 days after.
+// pub fn generate_cl_contract_periods(start_year: i32, end_year: i32) -> Vec<(String, Date, Date)> {
+//     let mut periods = Vec::new();
+//
+//     for year in start_year..=end_year {
+//         for &month in ALL_MONTHS.iter() {
+//             let expiry = calculate_cl_expiration(year, month);
+//             let start_date = expiry - time::Duration::days(40);
+//             let end_date = expiry + time::Duration::days(3);
+//             let symbol = format_cl_symbol(year, month);
+//
+//             periods.push((symbol, start_date, end_date));
+//         }
+//     }
+//
+//     periods
+// }
+
+fn calculate_expiration_date(symbol: &str, year: i32, month: Month) -> Date {
+    match symbol {
+        // Energy commodities:
+        "CL" | "NG" | "RB" | "HO" => energy_expiry(year, month),
+
+        // Equity indices:
+        "ES" | "NQ" | "RTY" | "YM" => indices_expiry(year, month),
+
+        // Add more cases as needed...
+        _ => panic!("Unsupported symbol: {symbol}"),
+    }
+}
+
+
+
+pub fn generate_contract_periods(
+    start_date: Date,
+    end_date: Date,
+    symbols: &[&str],
+) -> Vec<(String, Date, Date)> {
+    let mut all_periods = vec![];
+
+    for &symbol in symbols {
+        match symbol {
+            "CL" => {
+                let mut current = start_date;
+                while current <= end_date {
+                    for month in ALL_MONTHS.iter() {
+                        let year = current.year();
+                        let expiry = calculate_expiration_date(symbol, year, *month);
+                        if expiry >= start_date && expiry <= end_date {
+                            let code = futures_month_code(*month);
+                            let symbol_code = format!("{symbol}{}{}", code, year % 10);
+                            let start = expiry - Duration::days(40);
+                            let end = expiry + Duration::days(3);
+                            all_periods.push((symbol_code, start, end));
+                        }
+                    }
+                    current = Date::from_calendar_date(current.year() + 1, Month::January, 1).unwrap();
+                }
+            }
+            _ => panic!("Unsupported symbol: {symbol}"),
+        }
+    }
+
+    all_periods
+}
+
+
+
+
 //-----------------------------------------------------------------------------------------------------------------//
 
 #[cfg(test)]
@@ -87,7 +157,7 @@ mod tests {
         let year = 2025;
 
         let expected_expiration = date!(2025 - 09 - 22);
-        let actual_expiration = calculate_cl_expiration(year, delivery_month);
+        let actual_expiration = energy_expiry(year, delivery_month);
 
         assert_eq!(expected_expiration, actual_expiration);
     }
@@ -103,7 +173,8 @@ mod tests {
 
     #[test]
     fn test_generate_range_has_correct_count() {
-        let periods = generate_cl_contract_periods(2022, 2023);
+        let periods = generate_contract_periods(date!(2022 - 01 - 01), date!(2023 - 01 - 01), &["CL"]);
+        assert_eq!(periods.len(), 12);
         assert_eq!(periods.len(), 24); // 2 years × 12 months
     }
 
@@ -121,7 +192,7 @@ mod tests {
 
     #[test]
     fn test_generate_cl_contract_periods_first_last_symbol() {
-        let periods = generate_cl_contract_periods(2022, 2023);
+        let periods = generate_contract_periods(date!(2022 - 01 - 01), date!(2023 - 01 - 01),&["CL"]);
         let first_symbol = &periods.first().unwrap().0;
         let last_symbol = &periods.last().unwrap().0;
         assert_eq!(first_symbol, "CLF2");
@@ -140,13 +211,13 @@ mod tests {
     fn test_calculate_cl_expiration_weekend() {
         // June 25th, 2023 is a Sunday so expiration should fall on the prior
         // Wednesday (21st).
-        let expiry = calculate_cl_expiration(2023, Month::July);
+        let expiry = energy_expiry(2023, Month::July);
         assert_eq!(expiry, date!(2023 - 06 - 21));
     }
 
     #[test]
     fn test_first_period_contents() {
-        let periods = generate_cl_contract_periods(2022, 2022);
+        let periods =  generate_contract_periods(date!(2022 - 01 - 01), date!(2023 - 12 - 31),&["CL"]);
         let (symbol, start, end) = &periods[0];
         assert_eq!(symbol, "CLF2");
         assert_eq!(*start, date!(2021 - 11 - 12));
