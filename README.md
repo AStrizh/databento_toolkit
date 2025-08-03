@@ -1,12 +1,21 @@
 # Databento Toolkit (Unofficial)
 
 ### Supported Futures Contracts: CL, NG, ES, NQ, RTY, YM
-*Currently, downloads for Index Futures are not working as desired, leaving large date gaps between contracts, will be addressed soon.*
-
 
 This project provides tools for downloading, decoding, and processing historical market data using the [Databento API](https://docs.databento.com/) and the Rust Programming Language.
-Allows users to download 1-minute bar data (OHLCV) for 6 futures contract symbols.
-It specifically downloads the last 40 days of CL (when it is front of the month). Time periods can be adjusted in the code.
+
+It supports downloading 1-minute bar data (OHLCV) for 6 futures contract symbols:   
+CL (crude oil)  
+NG (natural gas)  
+ES (S&P 500 index)  
+NQ (Nasdaq futures)  
+RTY (Russell 2000 index)  
+YM (Dow Jones index).
+
+- **Energy contracts:** Downloads the last 40 days for the front-month contract (e.g., CL, NG).
+- **Index contracts:** Maintains a 10-day overlap between quarterly expirations (e.g., ES, NQ).
+
+Now includes a **Graphical User Interface (GUI)** built using `egui`, enabling easier usage without running CLI commands.
 
 
 
@@ -15,28 +24,37 @@ It specifically downloads the last 40 days of CL (when it is front of the month)
 - Built with JetBrain's RustRover IDE (and ChatGPT {I promise I tested it} ) 
 ---
 
+![img.png](img.png)
+---
 
 
 ## Features
 
-1. **Download Data**
-    - Fetch historical market data from the Databento API.
-    - Downloads are batched and concurrency-controlled to avoid API throttling.
-    - Data is stored in a file format suitable for further decoding and processing.
+1. **Graphical User Interface**
+   - Options to trigger downloads and decode operations directly from the GUI.
+   - Select start and end dates. The system handles:
+      - Determining contract expiration
+      - Breaking downloads into sets of front of the month contracts
+      - Ensures 10-day overlap between contracts (to fine-tune rollover strategies for your backtesting)
+      - Sorting downloads into folders for each symbol
 
 
-2. **Customizable Contract Periods**
-    - Automatically generate contract periods for CL futures (e.g., `CLN3`) based on expiration dates.
-    - Configure the range of years for generation.
-   
+2. **Download Data**
+   - Fetch historical market data from the Databento API.
+   - Supports crude oil, natural gas, and index futures contracts.
+   - Downloads are optimized with concurrency-control
+
 
 3. **Decode Data**
-    - Decode Databento's `.dbn.zst` compressed binary format into JSON.
+   - Decodes Databento's `.dbn.zst` compressed file format into JSON for further analysis.
+   - Processes downloaded files in bulk and outputs decoded files into the same folder structure.
 
 
-4. **Request a Quote (Get API Cost)**
-    - Allows users to estimate the cost of a request for specific datasets, symbols, and date ranges before making an actual download.
-
+4. **[CURRENTLY DISABLED] Request a Quote (API Cost Estimation)**
+   - Code exists for this, can use it in the CLI, will need tinkering
+   - Calculate the estimated cost of fetching historical data based on:
+      - Symbol, date range, and schema (e.g., OHLCV with 1-minute granularity).
+   - Prevents unnecessary API costs by previewing charges before initiating downloads.
 ---
 
 ## Prerequisites & Setup
@@ -64,7 +82,7 @@ Before using this toolkit, ensure you have the following:
 ---
 
 
-## How to Use
+## How to Use (OLD - Now just use GUI)
 
 ### 1. **Download Historical Data**
 
@@ -158,31 +176,11 @@ Returns the estimated cost of a history download request from Databento.
 ---
 
 ## Customization Notes
-
-1. **Years of Data**
-   To modify the range of years, adjust the logic in `download.rs`:
-```rust
-let periods = generate_cl_contract_periods(start_year, end_year);
-```
-
-Replace `start_year` and `end_year` with your desired range. (I will add ability to specify dates and hours soon)
-
-2. **Concurrency Limits**
-   Semaphore limits concurrency to avoid API throttling. Adjust this line in `download.rs`:
-```rust
-let semaphore = Arc::new(Semaphore::new(10)); // Change 10 to desired limit
-```
-
-
-3. **Folder Structure**
-   By default, files are organized by year in a `base_path` folder. You can change the `base_path` variable in `main.rs` to a different root directory.
-
-4. **Symbols**
-   The project is optimized for crude oil (CL) contracts. To add support for other symbols, adapt the `generate_cl_contract_periods` function in `contracts.rs`.
+(Needs updating)
 
 ---
 
-## Example Workflow
+## Example Workflow (Old)
 
 1. **Download the Data:**
    Run the `download` task to fetch `.dbn.zst` datasets:
@@ -209,16 +207,15 @@ Decoded files are saved in the same directory (`Hist_Fut_Data`).
 
 ## Future Enhancements
 
-- **Symbol and Date Flexibility:**
-  Extend support for downloading and processing other futures symbols (e.g., GC for gold or ES for S&P 500).
+- **More Symbols:**
+    Support for metals and forex futures.
 - **Pretty Print Option:**
     Currently, decoded times are in Unix time and prices are in integers with no decimals.
+- **Improved User Interface:** Low priority 
 - **Other Data Sets:**
-    Databento gives to option to download data from different sources in many different formats (including tick data).
-    
-    Low priority.
-- **A Graphical User Interface:**
-  Very low priority
+    Databento gives to option to download data from different sources in many different formats (including tick data).  
+    Very Low priority.
+
 ---
 
 ## Troubleshooting
