@@ -1,5 +1,6 @@
 use databento::HistoricalClient;
 
+
 /// Wraps a `HistoricalClient` and hides API key management
 #[derive(Clone)]
 pub struct DBClient {
@@ -22,5 +23,4 @@ impl DBClient {
     pub fn get_mut(&mut self) -> &mut HistoricalClient {
         &mut self.client
     }
-
 }
