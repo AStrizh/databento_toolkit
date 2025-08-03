@@ -13,6 +13,10 @@ mod downloader;
 mod types;
 mod gui;
 
+mod custom_datepicker;
+
+use crate::custom_datepicker::CustomDatePickerButton;
+
 fn main() -> Result<(), eframe::Error> {
     let options = eframe::NativeOptions::default();
     eframe::run_native(

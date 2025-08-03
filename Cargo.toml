@@ -14,4 +14,5 @@ async-compression = "0.4.27"
 anyhow = "1.0.98"
 clap = { version = "4.5.42", features = ["derive"] }
 eframe = "0.32.0"
-tempfile = "3.20.0"
+egui_extras = { version = "0.32", default-features = false, features = ["chrono", "datepicker"] }
+chrono = "0.4.41"
