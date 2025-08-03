@@ -29,7 +29,7 @@ fn generate_tasks(
 
     for &base_symbol in symbols {
         let periods = generate_contract_periods(base_symbol, start_date, end_date);
-        let symbol_dir = format!("{}/{}/{}", base_path, start_date.year(), base_symbol);
+        let symbol_dir = format!("{}/{}", base_path, base_symbol);
 
         if !Path::new(&symbol_dir).exists() {
             fs::create_dir_all(&symbol_dir)?;
@@ -96,10 +96,13 @@ mod tests {
 
         assert!(!tasks.is_empty());
 
-        // Ensure directory structure is correct
         for symbol in ["CL", "NG"] {
-            let expected_dir = format!("{}/{}/{}", base_path, start.year(), symbol);
-            assert!(Path::new(&expected_dir).exists(), "Expected directory missing: {}", expected_dir);
+            let expected_dir = format!("{}/{}", base_path, symbol);
+            assert!(
+                Path::new(&expected_dir).exists(),
+                "Expected directory missing: {}",
+                expected_dir
+            );
         }
 
         cleanup_test_dir(base_path);
@@ -114,14 +117,12 @@ mod tests {
         let end = date!(2023 - 12 - 31);
         let tasks = generate_tasks(start, end, &["CL"], base_path).expect("Should create tasks");
 
-        // Manually fake the effect of download_data
         for task in &tasks {
             let file = format!("{}/{}_{}_{}.mock", task.base_path, task.symbol, task.start, task.end);
             fs::create_dir_all(&task.base_path).unwrap();
             fs::write(file, "mock data").unwrap();
         }
 
-        // Confirm files were created
         for task in &tasks {
             let file = format!("{}/{}_{}_{}.mock", task.base_path, task.symbol, task.start, task.end);
             assert!(Path::new(&file).exists(), "Missing file: {}", file);
@@ -141,7 +142,7 @@ mod tests {
 
         assert!(result.is_ok());
 
-        let ng_dir = format!("{}/{}/NG", base_path, start.year());
+        let ng_dir = format!("{}/NG", base_path);
         assert!(Path::new(&ng_dir).exists(), "Expected directory for NG not found");
 
         cleanup_test_dir(base_path);

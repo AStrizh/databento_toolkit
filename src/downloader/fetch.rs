@@ -6,7 +6,8 @@ use crate::types::DownloadTask;
 
 
 // pub async fn download_data(mut task: DownloadTask) -> databento::Result<()> {
-//     let path = format!("{}/{}.dbn.zst", task.base_path, task.symbol);
+//     let path = format!("{}/{}_{}_{}.dbn.zst", task.base_path, task.start, task.end, task.symbol);
+//
 //     task.client
 //         .get_mut()
 //         .timeseries()
@@ -20,7 +21,7 @@ use crate::types::DownloadTask;
 //                 .build(),
 //         )
 //         .await?;
-// 
+//
 //     println!("Finished downloading {} for period {} to {}", task.symbol, task.start, task.end);
 //     Ok(())
 // }
@@ -28,14 +29,13 @@ use crate::types::DownloadTask;
 
 
 // --- TEMPORARY FOR INTEGRATION TESTING ---
-// Replace with real import after testing
+// Comment this code for real builds
 pub async fn download_data(task: DownloadTask) -> anyhow::Result<()> {
     use std::fs;
     use std::path::Path;
 
-    let filename = format!("{}/{}_{}_{}.mock", task.base_path, task.symbol, task.start, task.end);
+    let filename = format!("{}/{}_{}_{}.mock", task.base_path, task.start, task.end, task.symbol);
     fs::create_dir_all(Path::new(&task.base_path))?;
     fs::write(&filename, b"mock data")?;
     Ok(())
 }
-
