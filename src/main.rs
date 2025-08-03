@@ -22,6 +22,8 @@ fn main() -> Result<(), eframe::Error> {
     eframe::run_native(
         "Databento Toolkit",
         options,
-        Box::new(|_cc| Ok(Box::new(gui::AppState::default()))),
+        Box::new(|cc| {
+            cc.egui_ctx.set_theme(egui::Theme::Dark);
+            Ok(Box::new(gui::AppState::default()))}),
     )
 }

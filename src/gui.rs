@@ -43,7 +43,7 @@ impl Default for AppState {
 
         Self {
             start_date: NaiveDate::from_ymd_opt(2023, 1, 1).unwrap(),
-            end_date: NaiveDate::from_ymd_opt(2023, 12, 31).unwrap(),
+            end_date: NaiveDate::from_ymd_opt(2025, 12, 31).unwrap(),
             selected_symbols: SUPPORTED_SYMBOLS.iter().map(|_| false).collect(),
             task_status: Arc::new(Mutex::new(String::new())),
             runtime,
