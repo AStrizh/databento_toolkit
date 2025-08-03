@@ -89,26 +89,30 @@ fn generate_energy_contracts(symbol: &str, start_date: Date, end_date: Date) -> 
 }
 
 fn generate_index_contracts(symbol: &str, start_date: Date, end_date: Date) -> Vec<(String, Date, Date)> {
-    let mut periods = Vec::new();
+    let mut periods: Vec<(String, Date, Date)> = Vec::new();
     let mut current = start_date;
 
     while current <= end_date {
         for &month in [Month::March, Month::June, Month::September, Month::December].iter() {
             let year = current.year();
             let expiry = calculate_expiration_date(symbol, year, month);
-            if expiry >= start_date && expiry <= end_date {
+            let start = expiry - Duration::days(45); // contract starts trading
+            let end = expiry + Duration::days(10);   // rollover padding
+
+            if start <= end_date && end >= start_date {
                 let code = futures_month_code(month);
                 let symbol_code = format!("{}{}{}", symbol, code, year % 10);
-                let start = expiry - Duration::days(40);
-                let end = expiry + Duration::days(3);
                 periods.push((symbol_code, start, end));
             }
         }
+
         current = Date::from_calendar_date(current.year() + 1, Month::January, 1).unwrap();
     }
 
     periods
 }
+
+
 
 pub fn generate_contract_periods(
     symbol: &str,
