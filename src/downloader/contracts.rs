@@ -90,27 +90,44 @@ fn generate_energy_contracts(symbol: &str, start_date: Date, end_date: Date) -> 
 
 fn generate_index_contracts(symbol: &str, start_date: Date, end_date: Date) -> Vec<(String, Date, Date)> {
     let mut periods: Vec<(String, Date, Date)> = Vec::new();
-    let mut current = start_date;
 
-    while current <= end_date {
-        for &month in [Month::March, Month::June, Month::September, Month::December].iter() {
-            let year = current.year();
-            let expiry = calculate_expiration_date(symbol, year, month);
-            let start = expiry - Duration::days(45); // contract starts trading
-            let end = expiry + Duration::days(10);   // rollover padding
+    // Start from the first contract expiry on or after start_date
+    let mut current_year = start_date.year();
+    let mut month_iter = [Month::March, Month::June, Month::September, Month::December].into_iter();
 
-            if start <= end_date && end >= start_date {
-                let code = futures_month_code(month);
-                let symbol_code = format!("{}{}{}", symbol, code, year % 10);
-                periods.push((symbol_code, start, end));
+    // Initialize the first contract
+    let mut previous_expiry = None;
+
+    while current_year <= end_date.year() {
+        for &month in &month_iter.clone().collect::<Vec<_>>() {
+            let expiry = calculate_expiration_date(symbol, current_year, month);
+            if expiry < start_date {
+                continue;
             }
+            if expiry > end_date {
+                break;
+            }
+
+            let start = if let Some(prev_expiry) = previous_expiry {
+                prev_expiry - Duration::days(10)
+            } else {
+                // First contract: assume 3-month default span
+                expiry - Duration::days(90)
+            };
+
+            let code = futures_month_code(month);
+            let symbol_code = format!("{}{}{}", symbol, code, current_year % 10);
+            periods.push((symbol_code, start, expiry));
+
+            previous_expiry = Some(expiry);
         }
 
-        current = Date::from_calendar_date(current.year() + 1, Month::January, 1).unwrap();
+        current_year += 1;
     }
 
     periods
 }
+
 
 
 
