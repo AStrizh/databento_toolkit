@@ -6,7 +6,7 @@ This project provides tools for downloading, decoding, and processing historical
 
 It supports downloading 1-minute bar data (OHLCV) for 6 futures contract symbols:   
 CL (crude oil)  
-~~NG (natural gas)~~ Issue found, do not use unless you can fix it yourself (time window issue found)  
+~~NG (natural gas)~~ Issue found, do not use unless you can fix it yourself (time window)  
 ES (S&P 500 index)  
 NQ (Nasdaq futures)  
 RTY (Russell 2000 index)  
