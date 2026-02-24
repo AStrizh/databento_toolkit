@@ -32,6 +32,7 @@ Now includes a **Graphical User Interface (GUI)** built using `egui`, enabling e
 
 1. **Graphical User Interface**
    - Options to trigger downloads and decode operations directly from the GUI.
+   - Estimate expected download cost before starting a download.
    - Select start and end dates. The system handles:
       - Determining contract expiration
       - Breaking downloads into sets of front of the month contracts
@@ -50,11 +51,19 @@ Now includes a **Graphical User Interface (GUI)** built using `egui`, enabling e
    - Processes downloaded files in bulk and outputs decoded files into the same folder structure.
 
 
-4. **[CURRENTLY DISABLED] Request a Quote (API Cost Estimation)**
-   - Code exists for this, can use it in the CLI, will need tinkering
+4. **Request a Quote (API Cost Estimation)**
+   - Available via CLI `quote` subcommand.
    - Calculate the estimated cost of fetching historical data based on:
       - Symbol, date range, and schema (e.g., OHLCV with 1-minute granularity).
    - Prevents unnecessary API costs by previewing charges before initiating downloads.
+
+---
+
+## Known Issues
+
+- `NG` (Natural Gas) contract estimation logic is currently broken for some contract windows and can return API resolution errors.
+- Because the estimator and downloader share contract-window generation, `NG` downloads are likely affected by the same issue.
+- `CL`, `ES`, `NQ`, `RTY`, and `YM` are currently more reliable than `NG`.
 ---
 
 ## Prerequisites & Setup
@@ -118,19 +127,22 @@ The decode task reads files in the `Hist_Fut_Data/` directory, decodes them, and
 
 ### 3. **Get a Quote (API Cost Estimation)**
 
-The `quote` task lets you estimate the cost of a request before downloading data.  
-Currently, it is hardcoded. I plan to change that in the future. Modify with values of interest to you.
+Use the `quote` subcommand to estimate cost before downloading.
 
-By default, the functionality uses the following parameters:
-- **Dataset:** `GLBX.MDP3`
-- **Date Range:** `2023-06-01` to `2023-06-30`
-- **Symbols:** `CLN3`
-- **Schema:** `Ohlcv1M` (OHLCV with 1-minute granularity)
+Example:
+```shell script
+cargo run -- quote --start 2023-06-01 --end 2023-06-30 --symbol CLN3 --dataset GLBX.MDP3
+```
 
-The printed output will show the cost estimate (in USD) for this request:
-```
-Cost for request: $0.0599
-```
+Required:
+- `--start YYYY-MM-DD`
+- `--end YYYY-MM-DD`
+
+Optional:
+- `--symbol` (default `CLN3`)
+- `--dataset` (default `GLBX.MDP3`)
+
+Current schema for quote requests is `Ohlcv1M`.
 
 ### **Note**:
 It cost $3.21 to download 24 months (24 contracts 40 days each) of CL futures data in 1-minute bars (this is the code as written now).  

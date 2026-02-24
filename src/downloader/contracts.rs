@@ -42,6 +42,20 @@ fn energy_expiry(year: i32, delivery_month: Month) -> Date {
     date
 }
 
+fn ng_expiry(year: i32, delivery_month: Month) -> Date {
+    let mut date = Date::from_calendar_date(year, delivery_month, 1).unwrap();
+    let mut business_days = 0;
+
+    while business_days < 3 {
+        date = date.previous_day().unwrap();
+        if !matches!(date.weekday(), Weekday::Saturday | Weekday::Sunday) {
+            business_days += 1;
+        }
+    }
+
+    date
+}
+
 fn indices_expiry(year: i32, month: Month) -> Date {
     let mut count = 0;
     let mut date = Date::from_calendar_date(year, month, 1).unwrap();
@@ -60,7 +74,8 @@ fn indices_expiry(year: i32, month: Month) -> Date {
 
 fn calculate_expiration_date(symbol: &str, year: i32, month: Month) -> Date {
     match symbol {
-        "CL" | "NG" | "RB" | "HO" => energy_expiry(year, month),
+        "NG" => ng_expiry(year, month),
+        "CL" | "RB" | "HO" => energy_expiry(year, month),
         "ES" | "NQ" | "RTY" | "YM" => indices_expiry(year, month),
         _ => panic!("Unsupported symbol: {symbol}"),
     }
@@ -78,7 +93,11 @@ fn generate_energy_contracts(symbol: &str, start_date: Date, end_date: Date) -> 
                 let code = futures_month_code(month);
                 let symbol_code = format!("{}{}{}", symbol, code, year % 10);
                 let start = expiry - Duration::days(40);
-                let end = expiry + Duration::days(3);
+                let end = if symbol == "NG" {
+                    expiry
+                } else {
+                    expiry + Duration::days(3)
+                };
                 periods.push((symbol_code, start, end));
             }
         }
@@ -93,13 +112,13 @@ fn generate_index_contracts(symbol: &str, start_date: Date, end_date: Date) -> V
 
     // Start from the first contract expiry on or after start_date
     let mut current_year = start_date.year();
-    let mut month_iter = [Month::March, Month::June, Month::September, Month::December].into_iter();
+    let index_months = [Month::March, Month::June, Month::September, Month::December];
 
     // Initialize the first contract
     let mut previous_expiry = None;
 
     while current_year <= end_date.year() {
-        for &month in &month_iter.clone().collect::<Vec<_>>() {
+        for &month in &index_months {
             let expiry = calculate_expiration_date(symbol, current_year, month);
             if expiry < start_date {
                 continue;
@@ -174,6 +193,19 @@ mod tests {
     }
 
     #[test]
+    fn test_ng_expiry_skips_weekends() {
+        let expiry = ng_expiry(2023, Month::July);
+        assert_eq!(expiry, date!(2023 - 06 - 28));
+    }
+
+    #[test]
+    fn test_ng_uses_different_rule_than_cl() {
+        let ng_exp = calculate_expiration_date("NG", 2023, Month::July);
+        let cl_exp = calculate_expiration_date("CL", 2023, Month::July);
+        assert_ne!(ng_exp, cl_exp);
+    }
+
+    #[test]
     fn test_indices_expiry_third_friday() {
         let expiry = indices_expiry(2024, Month::June);
         assert_eq!(expiry, date!(2024 - 06 - 21));
@@ -184,6 +216,31 @@ mod tests {
         let periods = generate_contract_periods("NG", date!(2023 - 01 - 01), date!(2023 - 12 - 31));
         assert!(periods.len() >= 11);
         assert!(periods.iter().all(|(s, _, _)| s.starts_with("NG")));
+    }
+
+    #[test]
+    fn test_ng_contract_end_is_expiry() {
+        let periods = generate_contract_periods("NG", date!(2025 - 01 - 01), date!(2025 - 12 - 31));
+        let (_, _, end) = periods
+            .iter()
+            .find(|(symbol, _, _)| symbol == "NGZ5")
+            .expect("Expected NGZ5 contract");
+
+        assert_eq!(*end, calculate_expiration_date("NG", 2025, Month::December));
+    }
+
+    #[test]
+    fn test_cl_contract_keeps_post_expiry_padding() {
+        let periods = generate_contract_periods("CL", date!(2025 - 01 - 01), date!(2025 - 12 - 31));
+        let (_, _, end) = periods
+            .iter()
+            .find(|(symbol, _, _)| symbol == "CLZ5")
+            .expect("Expected CLZ5 contract");
+
+        assert_eq!(
+            *end,
+            calculate_expiration_date("CL", 2025, Month::December) + Duration::days(3)
+        );
     }
 
     #[test]

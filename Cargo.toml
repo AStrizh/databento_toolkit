@@ -3,6 +3,9 @@ name = "databento_toolkit"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+serde = []
+
 [dependencies]
 databento = "0.31.0"
 time = { version = "0.3.41", features = ["macros"] }

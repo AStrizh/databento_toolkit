@@ -1,12 +1,14 @@
 use databento::dbn::Schema;
 use databento::historical::timeseries::GetRangeToFileParams;
 use crate::types::DownloadTask;
+use crate::downloader::range::download_time_range;
 
 // In normal builds, use the real downloader, uncomment below this line
 
 
 pub async fn download_data(mut task: DownloadTask) -> databento::Result<()> {
     let path = format!("{}/{}_{}_{}.dbn.zst", task.base_path, task.start, task.end, task.symbol);
+    let (range_start, range_end) = download_time_range(task.start, task.end);
 
     task.client
         .get_mut()
@@ -14,7 +16,7 @@ pub async fn download_data(mut task: DownloadTask) -> databento::Result<()> {
         .get_range_to_file(
             &GetRangeToFileParams::builder()
                 .dataset("GLBX.MDP3")
-                .date_time_range((task.start.midnight().assume_utc(), task.end.midnight().assume_utc()))
+                .date_time_range((range_start, range_end))
                 .symbols(task.symbol.clone())
                 .schema(Schema::Ohlcv1M)
                 .path(path)
